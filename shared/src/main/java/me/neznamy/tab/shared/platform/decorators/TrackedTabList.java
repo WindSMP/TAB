@@ -41,6 +41,9 @@ public abstract class TrackedTabList<P extends TabPlayer> implements TabList {
     /** Players to change to survival gamemode instead of spectator */
     private final Set<UUID> blockedSpectators = Collections.synchronizedSet(new HashSet<>());
 
+    /** Entries temporarily kept unlisted until their initial sorting team is ready */
+    private final Set<UUID> joiningEntries = ConcurrentHashMap.newKeySet();
+
     /** Header sent by the plugin */
     @Nullable
     protected TabComponent header;
@@ -191,6 +194,32 @@ public abstract class TrackedTabList<P extends TabPlayer> implements TabList {
         allPlayersHidden = false;
         for (TabPlayer all : TAB.getInstance().getOnlinePlayers()) {
             updateListed(all, true);
+        }
+    }
+
+    /**
+     * Returns whether a listed player-info entry should temporarily be hidden
+     * while TAB prepares the player's initial sorting team.
+     *
+     * @param entry entry UUID
+     * @param listed listed value from the original packet
+     * @return {@code true} if the packet should be rewritten as unlisted
+     */
+    protected boolean shouldHidePlayerDuringJoin(@NotNull UUID entry, boolean listed) {
+        if (!listed || !TAB.getInstance().getFeatureManager().isPlayerJoinLoading(entry)) return false;
+        joiningEntries.add(entry);
+        return true;
+    }
+
+    /**
+     * Makes an entry visible after its sorting team has been registered. Entries
+     * hidden by Layout remain hidden.
+     *
+     * @param entry entry UUID
+     */
+    public void releasePlayerAfterJoin(@NotNull UUID entry) {
+        if (joiningEntries.remove(entry) && !allPlayersHidden) {
+            updateListed(entry, true);
         }
     }
 

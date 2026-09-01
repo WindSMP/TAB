@@ -42,6 +42,7 @@ public class BukkitEventListener implements EventListener<Player>, Listener {
      */
     @EventHandler(priority = EventPriority.LOW)
     public void onJoin(PlayerJoinEvent e) {
+        TAB.getInstance().getFeatureManager().beginPlayerJoin(e.getPlayer().getUniqueId());
         TAB.getInstance().addTablistTracker(
                 e.getPlayer().getUniqueId(),
                 platform.getServerVersionInfo().getImplementationProvider().newTabListEntryTracker(e.getPlayer())

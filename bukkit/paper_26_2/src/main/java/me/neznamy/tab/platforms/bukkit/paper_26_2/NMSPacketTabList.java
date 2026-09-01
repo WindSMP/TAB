@@ -142,6 +142,9 @@ public class NMSPacketTabList extends TrackedTabList<BukkitTabPlayer> {
                     if (allPlayersHidden && !LayoutManagerImpl.UUIDS_SET.contains(nmsData.profileId())) { // Filter out layout entries
                         listed = false;
                         rewriteEntry = rewritePacket = true;
+                    } else if (actions.contains(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER) && shouldHidePlayerDuringJoin(nmsData.profileId(), listed)) {
+                        listed = false;
+                        rewriteEntry = rewritePacket = true;
                     }
                 }
                 if (actions.contains(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER)) {

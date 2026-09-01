@@ -37,6 +37,7 @@ public interface EventListener<T> {
      */
     default void quit(@NotNull UUID player) {
         if (TAB.getInstance().isPluginDisabled()) return;
+        TAB.getInstance().getFeatureManager().cancelPlayerJoin(player);
         TAB.getInstance().getCPUManager().runTask(() ->
                 TAB.getInstance().getFeatureManager().onQuit(TAB.getInstance().getPlayer(player)));
     }

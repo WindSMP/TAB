@@ -37,12 +37,20 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Feature registration which offers calls to all features
  * and measures how long it took them to process
  */
 public class FeatureManager {
+
+    /**
+     * Players whose Bukkit join event has fired, but whose sorting team has not
+     * been registered yet. Modern Bukkit implementations use this to keep the
+     * initial player-info entry unlisted until it is ready.
+     */
+    private final Set<UUID> loadingPlayers = ConcurrentHashMap.newKeySet();
 
     /** Map of all registered feature where key is feature's identifier */
     private final Map<String, TabFeature> features = new LinkedHashMap<>();
@@ -150,6 +158,7 @@ public class FeatureManager {
      */
     public void onQuit(@Nullable TabPlayer disconnectedPlayer) {
         if (disconnectedPlayer == null) return;
+        loadingPlayers.remove(disconnectedPlayer.getUniqueId());
         disconnectedPlayer.markOffline();
         long millis = System.currentTimeMillis();
         for (TabFeature f : values) {
@@ -210,11 +219,65 @@ public class FeatureManager {
             }
         }
         connectedPlayer.markAsLoaded(true);
+        NameTag nameTags = getFeature(TabConstants.Feature.NAME_TAGS);
+        if (nameTags != null) {
+            // NameTag has its own single thread. Queueing this after its join
+            // handler guarantees that the sorting team packets are sent first.
+            nameTags.getCustomThread().execute(() -> finishPlayerJoin(connectedPlayer));
+        } else {
+            finishPlayerJoin(connectedPlayer);
+        }
         TAB.getInstance().debug("Player join of " + connectedPlayer.getName() + " processed in " + (System.currentTimeMillis()-millis) + "ms");
         if (TAB.getInstance().getConfiguration().getUsers() instanceof MySQLUserConfiguration) {
             MySQLUserConfiguration users = (MySQLUserConfiguration) TAB.getInstance().getConfiguration().getUsers();
             users.load(connectedPlayer);
         }
+    }
+
+    /**
+     * Marks a player as being in the short interval between Bukkit's join event
+     * and TAB registering their sorting team.
+     *
+     * @param player player UUID
+     */
+    public void beginPlayerJoin(@NotNull UUID player) {
+        loadingPlayers.add(player);
+    }
+
+    /**
+     * Returns whether the player is still waiting for their initial sorting team.
+     *
+     * @param player player UUID
+     * @return {@code true} while the join is being processed
+     */
+    public boolean isPlayerJoinLoading(@NotNull UUID player) {
+        return loadingPlayers.contains(player);
+    }
+
+    /**
+     * Cancels pending join handling if the player disconnected before loading
+     * completed.
+     *
+     * @param player player UUID
+     */
+    public void cancelPlayerJoin(@NotNull UUID player) {
+        loadingPlayers.remove(player);
+    }
+
+    /**
+     * Releases player-list entries hidden during join. The global scheduler is
+     * required by Canvas and also preserves packet order with its scoreboard
+     * team registration tasks.
+     *
+     * @param connectedPlayer player whose join finished
+     */
+    private void finishPlayerJoin(@NotNull TabPlayer connectedPlayer) {
+        TAB.getInstance().getPlatform().runSyncGlobal(() -> {
+            if (!loadingPlayers.remove(connectedPlayer.getUniqueId())) return;
+            for (TabPlayer viewer : TAB.getInstance().getOnlinePlayers()) {
+                ((TrackedTabList<?>) viewer.getTabList()).releasePlayerAfterJoin(connectedPlayer.getTablistId());
+            }
+        });
     }
 
     /**
