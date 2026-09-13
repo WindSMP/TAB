@@ -11,6 +11,7 @@ import me.neznamy.tab.shared.chat.component.TabComponent;
 import me.neznamy.tab.shared.cpu.TimedCaughtTask;
 import me.neznamy.tab.shared.platform.TabList;
 import me.neznamy.tab.shared.platform.TabPlayer;
+import me.neznamy.tab.shared.metrics.OutboundPacketMetrics;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,6 +39,9 @@ public abstract class TrackedTabList<P extends TabPlayer> implements TabList {
     /** Forced display names based on configuration, saving to restore them if another plugin overrides them */
     private final Map<UUID, TabComponent> forcedDisplayNames = new ConcurrentHashMap<>();
 
+    /** Entries for which a null display name was explicitly sent. */
+    private final Set<UUID> knownDisplayNameStates = ConcurrentHashMap.newKeySet();
+
     /** Players to change to survival gamemode instead of spectator */
     private final Set<UUID> blockedSpectators = Collections.synchronizedSet(new HashSet<>());
 
@@ -57,23 +61,23 @@ public abstract class TrackedTabList<P extends TabPlayer> implements TabList {
 
     @Override
     public void updateDisplayName(@NonNull UUID entry, @Nullable TabComponent displayName) {
-        if (displayName != null) {
-            forcedDisplayNames.put(entry, displayName);
-        } else {
-            forcedDisplayNames.remove(entry);
-        }
+        if (!setDisplayNameState(entry, displayName)) return;
         if (player.getVersion().getNetworkId() < ProtocolVersion.V1_8.getNetworkId()) {
             return; // Display names are not supported on 1.7 and below
         }
+        OutboundPacketMetrics.tablistPacket();
         updateDisplayName0(entry, displayName);
     }
 
     @Override
     public void addEntry(@NonNull Entry entry) {
-        if (entry.getDisplayName() != null) {
-            forcedDisplayNames.put(entry.getUniqueId(), entry.getDisplayName());
-        } else {
-            forcedDisplayNames.remove(entry.getUniqueId());
+        synchronized (this) {
+            knownDisplayNameStates.add(entry.getUniqueId());
+            if (entry.getDisplayName() != null) {
+                forcedDisplayNames.put(entry.getUniqueId(), entry.getDisplayName());
+            } else {
+                forcedDisplayNames.remove(entry.getUniqueId());
+            }
         }
         addEntry0(entry);
         if (player.getVersion() == ProtocolVersion.V1_8) {
@@ -84,21 +88,19 @@ public abstract class TrackedTabList<P extends TabPlayer> implements TabList {
 
     @Override
     public void updateDisplayName(@NonNull TabPlayer target, @Nullable TabComponent displayName) {
-        if (displayName != null) {
-            forcedDisplayNames.put(target.getTablistId(), displayName);
-        } else {
-            forcedDisplayNames.remove(target.getTablistId());
-        }
+        if (!setDisplayNameState(target.getTablistId(), displayName)) return;
         if (target.getVersion().getNetworkId() < ProtocolVersion.V1_8.getNetworkId()) {
             return; // Display names are not supported on 1.7 and below
         }
         if (containsEntry(target.getTablistId())) {
+            OutboundPacketMetrics.tablistPacket();
             updateDisplayName0(target.getTablistId(), displayName);
         } else {
             // Entry is not in tablist. This could be on join. Delay and try again.
             TAB.getInstance().getCpu().getTablistEntryCheckThread().executeLater(new TimedCaughtTask(TAB.getInstance().getCpu(), () -> {
                 // If entry was added in the meantime and display name did not
                 if (containsEntry(target.getTablistId()) && Objects.equals(forcedDisplayNames.get(target.getTablistId()), displayName)) {
+                    OutboundPacketMetrics.tablistPacket();
                     updateDisplayName0(target.getTablistId(), displayName);
                 }
             }, TabConstants.Feature.PLAYER_LIST, "Delayed format update"), 500);
@@ -147,8 +149,13 @@ public abstract class TrackedTabList<P extends TabPlayer> implements TabList {
 
     @Override
     public void setPlayerListHeaderFooter(@Nullable TabComponent header, @Nullable TabComponent footer) {
+        if (sameComponent(this.header, header) && sameComponent(this.footer, footer)) {
+            OutboundPacketMetrics.suppressedUpdate();
+            return;
+        }
         this.header = header;
         this.footer = footer;
+        OutboundPacketMetrics.headerFooterPacket();
         setPlayerListHeaderFooter0(
                 header == null ? TabComponent.empty() : header,
                 footer == null ? TabComponent.empty() : footer
@@ -160,8 +167,40 @@ public abstract class TrackedTabList<P extends TabPlayer> implements TabList {
      */
     public void resendHeaderFooter() {
         if (header != null && footer != null) {
+            OutboundPacketMetrics.fullResync();
+            OutboundPacketMetrics.headerFooterPacket();
             setPlayerListHeaderFooter0(header, footer);
         }
+    }
+
+    private synchronized boolean setDisplayNameState(@NotNull UUID entry, @Nullable TabComponent displayName) {
+        boolean known = knownDisplayNameStates.contains(entry);
+        TabComponent previous = forcedDisplayNames.get(entry);
+        if (known && sameComponent(previous, displayName)) {
+            OutboundPacketMetrics.suppressedUpdate();
+            return false;
+        }
+        knownDisplayNameStates.add(entry);
+        if (displayName == null) {
+            forcedDisplayNames.remove(entry);
+        } else {
+            forcedDisplayNames.put(entry, displayName);
+        }
+        return true;
+    }
+
+    /** Drops all cached display-name state after a player-info remove packet. */
+    protected synchronized void forgetDisplayNameState(@NotNull UUID entry) {
+        forcedDisplayNames.remove(entry);
+        knownDisplayNameStates.remove(entry);
+        joiningEntries.remove(entry);
+        blockedSpectators.remove(entry);
+    }
+
+    private static boolean sameComponent(@Nullable TabComponent first, @Nullable TabComponent second) {
+        if (first == second) return true;
+        if (first == null || second == null) return false;
+        return first.toLegacyText().equals(second.toLegacyText());
     }
 
     @Override
@@ -275,6 +314,11 @@ public abstract class TrackedTabList<P extends TabPlayer> implements TabList {
      */
     @NotNull
     public abstract Object onPacketSend(@NonNull Object packet);
+
+    /** Whether foreign display-name updates should be inspected and rewritten. */
+    protected boolean isDisplayNameAntiOverrideEnabled() {
+        return TAB.getInstance().getConfiguration().getConfig().isTablistNameAntiOverride();
+    }
 
     /**
      * Updates display name of an entry. Using {@code null} makes it undefined and

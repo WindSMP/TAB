@@ -32,7 +32,7 @@ public class TeamConfiguration {
     public static TeamConfiguration fromSection(@NotNull ConfigurationSection section) {
         // Check keys
         section.checkForUnknownKey(Arrays.asList("enabled", "enable-collision", "invisible-nametags", "sorting-types",
-                "case-sensitive-sorting", "can-see-friendly-invisibles", "disable-condition"));
+                "case-sensitive-sorting", "can-see-friendly-invisibles", "disable-condition", "anti-override"));
 
         return new TeamConfiguration(
                 section,

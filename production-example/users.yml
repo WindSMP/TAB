@@ -1,0 +1,3 @@
+# Keep empty in normal operation. Per-user dynamic formats defeat group-level sharing
+# and make invalidation harder to reason about at scale.
+{}

@@ -434,7 +434,7 @@ public class NameTag extends TabFeature implements NameTagManager, JoinListener,
             TabPlayer p = (TabPlayer) player;
             p.ensureLoaded();
             p.teamData.prefix.setTemporaryValue(prefix);
-            prefixSuffixManager.updatePrefixSuffix(p);
+            prefixSuffixManager.queuePrefixSuffixUpdate(p);
         }, getFeatureName(), "Processing API call (setPrefix)"));
     }
 
@@ -445,7 +445,7 @@ public class NameTag extends TabFeature implements NameTagManager, JoinListener,
             TabPlayer p = (TabPlayer) player;
             p.ensureLoaded();
             p.teamData.suffix.setTemporaryValue(suffix);
-            prefixSuffixManager.updatePrefixSuffix(p);
+            prefixSuffixManager.queuePrefixSuffixUpdate(p);
         }, getFeatureName(), "Processing API call (setSuffix)"));
     }
 

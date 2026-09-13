@@ -6,6 +6,7 @@ import me.neznamy.tab.shared.chat.EnumChatFormat;
 import me.neznamy.tab.shared.chat.component.TabComponent;
 import me.neznamy.tab.shared.platform.Scoreboard;
 import me.neznamy.tab.shared.platform.TabPlayer;
+import me.neznamy.tab.shared.metrics.OutboundPacketMetrics;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -60,6 +61,7 @@ public abstract class SafeScoreboard<T extends TabPlayer> implements Scoreboard 
         Objective objective = new Objective(objectiveName, title, display, numberFormat, null);
         objectives.put(objectiveName, objective);
         if (frozen) return;
+        OutboundPacketMetrics.scoreboardPacket();
         registerObjective(objective);
     }
 
@@ -70,8 +72,13 @@ public abstract class SafeScoreboard<T extends TabPlayer> implements Scoreboard 
             error("Tried to set display slot for non-existing objective %s to player ", objectiveName);
             return;
         }
+        if (objective.displaySlot == displaySlot) {
+            OutboundPacketMetrics.suppressedUpdate();
+            return;
+        }
         objective.setDisplaySlot(displaySlot);
         if (frozen) return;
+        OutboundPacketMetrics.scoreboardPacket();
         setDisplaySlot(objective);
     }
 
@@ -83,6 +90,7 @@ public abstract class SafeScoreboard<T extends TabPlayer> implements Scoreboard 
             return;
         }
         if (frozen) return;
+        OutboundPacketMetrics.scoreboardPacket();
         unregisterObjective(objective);
     }
 
@@ -94,8 +102,14 @@ public abstract class SafeScoreboard<T extends TabPlayer> implements Scoreboard 
             error("Tried to modify non-existing objective %s for player ", objectiveName);
             return;
         }
+        if (sameComponent(objective.title, title) && objective.healthDisplay == display &&
+                sameComponent(objective.numberFormat, numberFormat)) {
+            OutboundPacketMetrics.suppressedUpdate();
+            return;
+        }
         objective.update(title, display, numberFormat);
         if (frozen) return;
+        OutboundPacketMetrics.scoreboardPacket();
         updateObjective(objective);
     }
 
@@ -112,9 +126,15 @@ public abstract class SafeScoreboard<T extends TabPlayer> implements Scoreboard 
             score = new Score(objective, scoreHolder, value, displayName, numberFormat);
             objective.getScores().put(scoreHolder, score);
         } else {
+            if (score.value == value && sameComponent(score.displayName, displayName) &&
+                    sameComponent(score.numberFormat, numberFormat)) {
+                OutboundPacketMetrics.suppressedUpdate();
+                return;
+            }
             score.update(value, displayName, numberFormat);
         }
         if (frozen) return;
+        OutboundPacketMetrics.scoreboardPacket();
         setScore(score);
     }
 
@@ -128,6 +148,7 @@ public abstract class SafeScoreboard<T extends TabPlayer> implements Scoreboard 
         Score score = objective.getScores().remove(scoreHolder);
         if (score == null) return;
         if (frozen) return;
+        OutboundPacketMetrics.scoreboardPacket();
         removeScore(score);
     }
 
@@ -144,6 +165,7 @@ public abstract class SafeScoreboard<T extends TabPlayer> implements Scoreboard 
         Team team = new Team(createTeam(name), name, prefix, suffix, visibility, collision, players, options, color);
         teams.put(name, team);
         if (frozen) return;
+        OutboundPacketMetrics.teamPacket();
         registerTeam(team);
     }
 
@@ -155,6 +177,7 @@ public abstract class SafeScoreboard<T extends TabPlayer> implements Scoreboard 
             return;
         }
         if (frozen) return;
+        OutboundPacketMetrics.teamPacket();
         unregisterTeam(team);
     }
 
@@ -167,8 +190,13 @@ public abstract class SafeScoreboard<T extends TabPlayer> implements Scoreboard 
             error("Tried to modify non-existing team %s for player ", name);
             return;
         }
+        if (team.matches(prefix, suffix, visibility, collision, options, color)) {
+            OutboundPacketMetrics.suppressedUpdate();
+            return;
+        }
         team.update(prefix, suffix, visibility, collision, options, color);
         if (frozen) return;
+        OutboundPacketMetrics.teamPacket();
         updateTeam(team);
     }
 
@@ -176,8 +204,13 @@ public abstract class SafeScoreboard<T extends TabPlayer> implements Scoreboard 
     public synchronized void updateTeam(@NonNull String name, @NonNull TabComponent prefix, @NonNull TabComponent suffix, @NonNull EnumChatFormat color) {
         Team team = teams.get(name);
         if (team == null) return;
+        if (sameComponent(team.prefix, prefix) && sameComponent(team.suffix, suffix) && team.color == color) {
+            OutboundPacketMetrics.suppressedUpdate();
+            return;
+        }
         team.update(prefix, suffix, color);
         if (frozen) return;
+        OutboundPacketMetrics.teamPacket();
         updateTeam(team);
     }
 
@@ -185,8 +218,13 @@ public abstract class SafeScoreboard<T extends TabPlayer> implements Scoreboard 
     public synchronized void updateTeam(@NonNull String name, @NonNull CollisionRule collision) {
         Team team = teams.get(name);
         if (team == null) return;
+        if (team.collision == collision) {
+            OutboundPacketMetrics.suppressedUpdate();
+            return;
+        }
         team.collision = collision;
         if (frozen) return;
+        OutboundPacketMetrics.teamPacket();
         updateTeam(team);
     }
 
@@ -194,23 +232,33 @@ public abstract class SafeScoreboard<T extends TabPlayer> implements Scoreboard 
     public synchronized void updateTeam(@NonNull String name, @NonNull NameVisibility visibility) {
         Team team = teams.get(name);
         if (team == null) return;
+        if (team.visibility == visibility) {
+            OutboundPacketMetrics.suppressedUpdate();
+            return;
+        }
         team.visibility = visibility;
         if (frozen) return;
+        OutboundPacketMetrics.teamPacket();
         updateTeam(team);
     }
 
     @Override
     public synchronized void resend() {
+        OutboundPacketMetrics.fullResync();
         for (Objective objective : objectives.values()) {
+            OutboundPacketMetrics.scoreboardPacket();
             registerObjective(objective);
             if (objective.getDisplaySlot() != null) {
+                OutboundPacketMetrics.scoreboardPacket();
                 setDisplaySlot(objective);
             }
             for (Score score : objective.getScores().values()) {
+                OutboundPacketMetrics.scoreboardPacket();
                 setScore(score);
             }
         }
         for (Team team : teams.values()) {
+            OutboundPacketMetrics.teamPacket();
             registerTeam(team);
         }
     }
@@ -269,6 +317,17 @@ public abstract class SafeScoreboard<T extends TabPlayer> implements Scoreboard 
     }
 
     /**
+     * Compares the normalized visible component state before platform conversion.
+     * The identity fast path covers the normal component-cache case without an
+     * allocation; the legacy representation covers cache eviction/recreation.
+     */
+    private static boolean sameComponent(@Nullable TabComponent first, @Nullable TabComponent second) {
+        if (first == second) return true;
+        if (first == null || second == null) return false;
+        return first.toLegacyText().equals(second.toLegacyText());
+    }
+
+    /**
      * Prints a debug message if attempted to perform an invalid operation.
      *
      * @param   format
@@ -312,6 +371,11 @@ public abstract class SafeScoreboard<T extends TabPlayer> implements Scoreboard 
     @NotNull
     public Object onPacketSend(@NonNull Object packet) {
         return packet;
+    }
+
+    /** Whether foreign team packets should be inspected and rewritten. */
+    protected boolean isTeamAntiOverrideEnabled() {
+        return TAB.getInstance().getConfiguration().getConfig().isScoreboardTeamAntiOverride();
     }
 
     /**
@@ -583,6 +647,14 @@ public abstract class SafeScoreboard<T extends TabPlayer> implements Scoreboard 
             this.prefix = prefix;
             this.suffix = suffix;
             this.color = color;
+        }
+
+        private boolean matches(@NonNull TabComponent prefix, @NonNull TabComponent suffix,
+                                @NonNull NameVisibility visibility, @NonNull CollisionRule collision,
+                                int options, @NonNull EnumChatFormat color) {
+            return sameComponent(this.prefix, prefix) && sameComponent(this.suffix, suffix) &&
+                    this.visibility == visibility && this.collision == collision &&
+                    this.options == options && this.color == color;
         }
     }
 }

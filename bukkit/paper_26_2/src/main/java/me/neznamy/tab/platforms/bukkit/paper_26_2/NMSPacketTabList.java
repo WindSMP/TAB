@@ -103,6 +103,9 @@ public class NMSPacketTabList extends TrackedTabList<BukkitTabPlayer> {
     @Override
     @NotNull
     public Object onPacketSend(@NonNull Object packet) {
+        if (packet instanceof ClientboundPlayerInfoRemovePacket remove) {
+            for (UUID entry : remove.profileIds()) forgetDisplayNameState(entry);
+        }
         if (packet instanceof ClientboundTabListPacket tablist) {
             if (header == null || footer == null) return packet;
             if (tablist.header() != header.convert() || tablist.footer() != footer.convert()) {
@@ -119,7 +122,7 @@ public class NMSPacketTabList extends TrackedTabList<BukkitTabPlayer> {
                 int latency = nmsData.latency();
                 int gameMode = nmsData.gameMode().getId();
                 boolean listed = nmsData.listed();
-                if (actions.contains(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME)) {
+                if (isDisplayNameAntiOverrideEnabled() && actions.contains(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME)) {
                     TabComponent forcedDisplayName = getForcedDisplayNames().get(nmsData.profileId());
                     if (forcedDisplayName != null && forcedDisplayName.convert() != displayName) {
                         displayName = forcedDisplayName.convert();

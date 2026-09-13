@@ -8,6 +8,7 @@ import me.neznamy.tab.shared.placeholders.types.RelationalPlaceholderImpl;
 import me.neznamy.tab.shared.placeholders.types.ServerPlaceholderImpl;
 import me.neznamy.tab.shared.placeholders.types.TabPlaceholder;
 import me.neznamy.tab.shared.platform.TabPlayer;
+import me.neznamy.tab.shared.metrics.OutboundPacketMetrics;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -49,6 +50,7 @@ public class PlaceholderRefreshTask implements Runnable {
                 ServerPlaceholderImpl serverPlaceholder = (ServerPlaceholderImpl) placeholder;
                 long startTime = System.nanoTime();
                 String result = serverPlaceholder.request();
+                OutboundPacketMetrics.placeholderEvaluations(1);
                 nanoTime += System.nanoTime()-startTime;
                 serverPlaceholderResults.put(serverPlaceholder, result);
             }
@@ -58,6 +60,7 @@ public class PlaceholderRefreshTask implements Runnable {
                 for (TabPlayer player : players) {
                     long startTime = System.nanoTime();
                     String result = playerPlaceholder.request(player);
+                    OutboundPacketMetrics.placeholderEvaluations(1);
                     nanoTime += System.nanoTime()-startTime;
                     playerResults.put(player, result);
                 }
@@ -71,6 +74,7 @@ public class PlaceholderRefreshTask implements Runnable {
                     for (TabPlayer target : players) {
                         long startTime = System.nanoTime();
                         String result = relationalPlaceholder.request(viewer, target);
+                        OutboundPacketMetrics.placeholderEvaluations(1);
                         nanoTime += System.nanoTime()-startTime;
                         targetMap.put(target, result);
                     }

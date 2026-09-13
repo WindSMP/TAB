@@ -260,6 +260,10 @@ components:
   minimessage-support: true
   disable-shadow-for-heads: true
 
+# Low-overhead counters included in /tab dump. Keep disabled outside profiling windows.
+diagnostics:
+  packet-metrics: false
+
 # Internal value, do not change this
 config-version: 7
 

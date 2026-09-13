@@ -26,6 +26,7 @@ import me.neznamy.tab.shared.placeholders.PlaceholderRefreshConfiguration;
 import me.neznamy.tab.shared.placeholders.PlaceholderReplacementsConfiguration;
 import me.neznamy.tab.shared.placeholders.PlaceholdersConfiguration;
 import me.neznamy.tab.shared.placeholders.conditions.ConditionsSection;
+import me.neznamy.tab.shared.metrics.OutboundPacketMetrics;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -68,6 +69,9 @@ public class Config {
     @NotNull private final String serverName = getSecretOption("server-name", "N/A");
     private final int permissionRefreshInterval = config.getInt("permission-refresh-interval", 1000);
     private final boolean packetEventsCompensation = config.getBoolean("compensate-for-packetevents-bug", false) && !TAB.getInstance().getPlatform().isSafeFromPacketEventsBug();
+    private final boolean scoreboardTeamAntiOverride = config.getBoolean("scoreboard-teams.anti-override", true);
+    private final boolean tablistNameAntiOverride = config.getBoolean("tablist-name-formatting.anti-override", true);
+    private final boolean packetMetrics = config.getBoolean("diagnostics.packet-metrics", false);
 
     /** If enabled, groups are assigned via permissions instead of permission plugin */
     private final boolean groupsByPermissions = config.getBoolean("assign-groups-by-permissions", false);
@@ -76,6 +80,7 @@ public class Config {
     @NotNull private final List<String> primaryGroupFindingList = config.getStringList("primary-group-finding-list", Arrays.asList("Owner", "Admin", "Helper", "default"));
 
     public Config() throws IOException {
+        OutboundPacketMetrics.setEnabled(packetMetrics);
         LegacyConverter converter = new LegacyConverter();
         converter.convert292to300(config);
         converter.convert301to302(config);

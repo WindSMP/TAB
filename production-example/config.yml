@@ -1,0 +1,124 @@
+# Production baseline for Canvas/Folia with up to 1,200 players.
+# Review group names, proxy settings and conditions before copying this file.
+
+header-footer:
+  enabled: true
+  designs:
+    default:
+      header:
+        - "&3&lServer"
+      footer:
+        - "&7Online: &f%online%"
+
+# Nametags already provide the same prefix/suffix in the vanilla player list.
+# Enable this only when the tab name must differ from the nametag.
+tablist-name-formatting:
+  enabled: false
+  anti-override: false
+
+# Keep enabled only when rank nametags, collision rules or team-based sorting are required.
+scoreboard-teams:
+  enabled: true
+  anti-override: false
+  enable-collision: true
+  invisible-nametags: false
+  sorting-types:
+    - "GROUPS:owner,admin,mod,helper,builder,vip,default"
+  case-sensitive-sorting: false
+  can-see-friendly-invisibles: false
+
+playerlist-objective:
+  enabled: false
+  value: "%ping%"
+  fancy-value: "&7Ping: %ping%"
+  title: "TAB"
+  render-type: INTEGER
+
+belowname-objective:
+  enabled: false
+  value: "%health%"
+  fancy-value: "&c%health%"
+  fancy-value-default: "NPC"
+  title: "&cHealth"
+  view-distance: 10
+
+bossbar:
+  enabled: false
+
+scoreboard:
+  enabled: false
+
+layout:
+  enabled: false
+
+prevent-spectator-effect:
+  enabled: false
+
+ping-spoof:
+  enabled: false
+
+global-playerlist:
+  enabled: false
+
+placeholders:
+  date-format: "dd.MM.yyyy"
+  time-format: "HH:mm"
+  time-offset: 0
+  register-tab-expansion: false
+  locale: de-DE
+
+placeholder-output-replacements: {}
+conditions: {}
+
+placeholder-refresh-intervals:
+  default-refresh-interval: 2000
+  "%ping%": 5000
+  "%player_ping%": 5000
+  "%online%": 3000
+  "%server_tps_1%": 3000
+  "%server_tps_1_colored%": 3000
+  "%vault_eco_balance%": 10000
+  "%vault_prefix%": 10000
+  "%vault_suffix%": 10000
+  "%luckperms-prefix%": 10000
+  "%luckperms-suffix%": 10000
+
+assign-groups-by-permissions: false
+primary-group-finding-list:
+  - owner
+  - admin
+  - mod
+  - helper
+  - builder
+  - vip
+  - default
+permission-refresh-interval: 10000
+
+debug: false
+
+mysql:
+  enabled: false
+
+# Keep enabled only when TAB is intentionally synchronised through a proxy.
+proxy-support:
+  enabled: true
+  channel-name-suffix: "custom"
+  type: PLUGIN
+  plugin:
+    name: RedisBungee
+
+components:
+  minimessage-support: true
+  disable-shadow-for-heads: true
+
+diagnostics:
+  packet-metrics: false
+
+config-version: 7
+
+per-world-playerlist:
+  enabled: false
+
+compensate-for-packetevents-bug: false
+use-bukkit-permissions-manager: false
+use-online-uuid-in-tablist: true

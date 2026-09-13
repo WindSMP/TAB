@@ -12,6 +12,7 @@ import me.neznamy.tab.shared.features.types.TabFeature;
 import me.neznamy.tab.shared.hook.MiniMessageHook;
 import me.neznamy.tab.shared.platform.TabPlayer;
 import me.neznamy.tab.shared.util.ReflectionUtils;
+import me.neznamy.tab.shared.metrics.OutboundPacketMetrics;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.yaml.snakeyaml.DumperOptions;
@@ -60,6 +61,7 @@ public class DumpCommand extends SubCommand {
         data.put("placeholders", TAB.getInstance().getPlaceholderManager().dump(analyzed));
         data.put("tablist", analyzed.getTabList().dump());
         data.put("scoreboard", analyzed.getScoreboard().dump());
+        data.put("outbound-packet-metrics", OutboundPacketMetrics.snapshot());
         data.put("files", dumpFiles());
         DumperOptions options = new DumperOptions();
         options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);

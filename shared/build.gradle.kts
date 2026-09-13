@@ -30,6 +30,12 @@ dependencies {
         exclude("org.slf4j", "slf4j-api")
     }
     implementation("com.saicone.delivery4j:extension-guava:1.1.1")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.2")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 sourceSets.main {

@@ -1,0 +1,28 @@
+# Replace these names with the exact primary groups returned by the permission plugin.
+# Values are deliberately static: no ping, TPS, health, economy, time, animation,
+# gradient or relational placeholder belongs in a team prefix/suffix.
+owner:
+  tagprefix: "&4&lOwner &r"
+  tagsuffix: ""
+admin:
+  tagprefix: "&c&lAdmin &r"
+  tagsuffix: ""
+mod:
+  tagprefix: "&2&lMod &r"
+  tagsuffix: ""
+helper:
+  tagprefix: "&a&lHelper &r"
+  tagsuffix: ""
+builder:
+  tagprefix: "&6&lBuilder &r"
+  tagsuffix: ""
+vip:
+  tagprefix: "&e&lVIP &r"
+  tagsuffix: ""
+default:
+  tagprefix: "&7"
+  tagsuffix: ""
+
+_DEFAULT_:
+  tagprefix: "&7"
+  tagsuffix: ""

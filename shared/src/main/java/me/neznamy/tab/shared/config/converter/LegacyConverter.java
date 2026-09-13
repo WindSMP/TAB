@@ -534,9 +534,8 @@ public class LegacyConverter {
      *          Config file
      */
     public void convert521to522(@NonNull ConfigurationFile config) {
-        if (config.removeOption("scoreboard-teams.anti-override")) {
-            TAB.getInstance().getPlatform().logInfo(new TabTextComponent("Performing configuration conversion from 5.2.1 to 5.2.2", TabTextColor.YELLOW));
-        }
-        config.removeOption("tablist-name-formatting.anti-override");
+        // Kept for compatibility with old configurations. This fork supports
+        // both switches again, so deleting them here would silently re-enable
+        // interception on every startup.
     }
 }

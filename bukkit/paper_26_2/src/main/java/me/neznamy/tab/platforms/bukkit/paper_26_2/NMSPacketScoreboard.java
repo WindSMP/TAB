@@ -149,6 +149,7 @@ public class NMSPacketScoreboard extends SafeScoreboard<BukkitTabPlayer> {
             TAB.getInstance().getFeatureManager().onObjective(player, objective.getMethod(), objective.getObjectiveName());
         }
         if (packet instanceof ClientboundSetPlayerTeamPacket team) {
+            if (!isTeamAntiOverrideEnabled()) return packet;
             int action = getMethod(team);
             if (action != TeamAction.UPDATE) {
                 Collection<String> players = team.getPlayers();

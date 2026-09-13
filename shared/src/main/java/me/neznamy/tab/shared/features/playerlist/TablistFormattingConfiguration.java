@@ -28,7 +28,7 @@ public class TablistFormattingConfiguration {
     @NotNull
     public static TablistFormattingConfiguration fromSection(@NotNull ConfigurationSection section) {
         // Check keys
-        section.checkForUnknownKey(Arrays.asList("enabled", "disable-condition"));
+        section.checkForUnknownKey(Arrays.asList("enabled", "disable-condition", "anti-override"));
 
         return new TablistFormattingConfiguration(section, section.getString("disable-condition", "%world%=disabledworld"));
     }
